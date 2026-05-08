@@ -1,5 +1,5 @@
 import { createSupabaseClient } from '@/src/lib/supabase'
-import HistorialTable from '../components/HistorialTable'
+import HistorialTable from '@/app/components/HistorialTable'
 
 export default async function HistorialPage() {
   const db = createSupabaseClient()

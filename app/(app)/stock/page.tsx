@@ -1,5 +1,5 @@
 import { createSupabaseClient } from '@/src/lib/supabase'
-import StockTable from '../components/StockTable'
+import StockTable from '@/app/components/StockTable'
 
 export default async function StockPage() {
   const db = createSupabaseClient()

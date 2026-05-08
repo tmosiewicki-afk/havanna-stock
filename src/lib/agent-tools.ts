@@ -279,10 +279,10 @@ async function queryStock(input: ToolInput, db: DB) {
   let query = db.from('stock_current').select('*')
 
   if (input.location_name) {
-    query = query.ilike('location_name', input.location_name as string)
+    query = query.ilike('location_name', `%${input.location_name as string}%`)
   }
   if (input.category) {
-    query = query.eq('category_name', input.category as string)
+    query = query.ilike('category_name', `%${input.category as string}%`)
   }
 
   const { data, error } = await query

@@ -323,6 +323,7 @@ export type MovementHistoryRow = Database['public']['Views']['movement_history']
 // ===== Client factory =====
 
 export function createSupabaseClient() {
+  console.log('[supabase] NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

@@ -8,6 +8,8 @@ import type {
 import { createSupabaseClient } from '@/src/lib/supabase'
 import { agentTools, executeAgentTool } from '@/src/lib/agent-tools'
 
+export const maxDuration = 60
+
 const anthropic = new Anthropic()
 const MAX_ITERATIONS = 10
 

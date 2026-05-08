@@ -124,6 +124,7 @@ export async function POST(request: Request) {
 
         send(sse('done', { messages }))
       } catch (err) {
+        console.error('[agent] error en agentic loop:', err)
         send(sse('error', { message: err instanceof Error ? err.message : String(err) }))
       } finally {
         controller.close()

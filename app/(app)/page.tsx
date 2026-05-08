@@ -1,5 +1,7 @@
 import { createSupabaseClient } from '@/src/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 async function getData() {
   const db = createSupabaseClient()
   const [stockRes, alertsRes, movementsRes] = await Promise.all([

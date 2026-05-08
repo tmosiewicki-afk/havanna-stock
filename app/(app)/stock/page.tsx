@@ -1,6 +1,8 @@
 import { createSupabaseClient } from '@/src/lib/supabase'
 import StockTable from '@/app/components/StockTable'
 
+export const dynamic = 'force-dynamic'
+
 export default async function StockPage() {
   const db = createSupabaseClient()
   const { data } = await db.from('stock_current').select('*')

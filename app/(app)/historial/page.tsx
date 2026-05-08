@@ -1,6 +1,8 @@
 import { createSupabaseClient } from '@/src/lib/supabase'
 import HistorialTable from '@/app/components/HistorialTable'
 
+export const dynamic = 'force-dynamic'
+
 export default async function HistorialPage() {
   const db = createSupabaseClient()
   const { data } = await db.from('movement_history').select('*').limit(100)

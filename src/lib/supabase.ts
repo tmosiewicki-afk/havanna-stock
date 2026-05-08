@@ -324,8 +324,12 @@ export type MovementHistoryRow = Database['public']['Views']['movement_history']
 
 export function createSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const key = serviceKey ?? anonKey
+
+  console.log('[supabase] SUPABASE_SERVICE_ROLE_KEY present:', !!serviceKey, 'length:', serviceKey?.length ?? 0)
+  console.log('[supabase] using key type:', serviceKey ? 'service_role' : 'anon')
 
   if (!url || !key) {
     throw new Error(

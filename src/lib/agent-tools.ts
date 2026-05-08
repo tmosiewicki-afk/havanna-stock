@@ -165,21 +165,26 @@ export async function executeAgentTool(
   input: ToolInput,
   db: DB,
 ): Promise<unknown> {
-  switch (toolName) {
-    case 'record_sale':
-      return recordSale(input, db)
-    case 'record_restock':
-      return recordRestock(input, db)
-    case 'adjust_stock':
-      return adjustStock(input, db)
-    case 'query_stock':
-      return queryStock(input, db)
-    case 'get_low_stock_alerts':
-      return getLowStockAlerts(input, db)
-    case 'get_movement_history':
-      return getMovementHistory(input, db)
-    default:
-      throw new Error(`Tool desconocida: ${toolName}`)
+  try {
+    switch (toolName) {
+      case 'record_sale':
+        return await recordSale(input, db)
+      case 'record_restock':
+        return await recordRestock(input, db)
+      case 'adjust_stock':
+        return await adjustStock(input, db)
+      case 'query_stock':
+        return await queryStock(input, db)
+      case 'get_low_stock_alerts':
+        return await getLowStockAlerts(input, db)
+      case 'get_movement_history':
+        return await getMovementHistory(input, db)
+      default:
+        throw new Error(`Tool desconocida: ${toolName}`)
+    }
+  } catch (err) {
+    console.error(`[agent-tools] error en ${toolName}:`, err)
+    throw err
   }
 }
 
@@ -228,7 +233,10 @@ async function recordSale(input: ToolInput, db: DB) {
     p_notes: (input.notes as string) ?? null,
   })
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    console.error('[agent-tools] record_sale supabase error:', JSON.stringify(error))
+    throw new Error(error.message)
+  }
   return { success: true, movement: data }
 }
 

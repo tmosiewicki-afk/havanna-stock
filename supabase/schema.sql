@@ -77,12 +77,11 @@ insert into product_categories (name, label) values
   ('havanna',       'Productos Havanna'),
   ('external_food', 'Comidas de Proveedores');
 
--- Ajustar con los nombres reales de los 4 proveedores
 insert into suppliers (name) values
-  ('Proveedor 1'),
-  ('Proveedor 2'),
-  ('Proveedor 3'),
-  ('Proveedor 4');
+  ('Havanna'),
+  ('Grandwich'),
+  ('Pepsi'),
+  ('Axion');
 
 -- Catálogo Havanna
 -- units_per_box: cuántas unidades contiene una caja (para conversión en el agente)

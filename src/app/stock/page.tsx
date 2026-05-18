@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { createSupabaseClient } from '../../lib/supabase'
 import StockTable from '../components/StockTable'
 

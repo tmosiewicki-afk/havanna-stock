@@ -203,12 +203,16 @@ async function resolveLocationId(name: string, db: DB): Promise<string> {
 async function resolveProductId(name: string, db: DB): Promise<string> {
   const { data, error } = await db
     .from('products')
-    .select('id')
-    .ilike('name', name)
+    .select('id, name')
+    .ilike('name', `%${name}%`)
     .eq('is_active', true)
-    .single()
-  if (error || !data) throw new Error(`Producto no encontrado: "${name}"`)
-  return data.id
+  if (error) throw new Error(`Error buscando producto: ${error.message}`)
+  if (!data || data.length === 0) throw new Error(`Producto no encontrado: "${name}"`)
+  if (data.length > 1) {
+    const names = (data as { id: string; name: string }[]).map((p) => p.name).join(', ')
+    throw new Error(`Varios productos coinciden con "${name}": ${names}. Especificá el nombre completo.`)
+  }
+  return (data as { id: string; name: string }[])[0].id
 }
 
 async function resolveSupplierIdOptional(

@@ -8,6 +8,37 @@ type EnrichedComparisonRow = StockComparisonRow & { supplier_name: string }
 
 const SUPPLIERS = ['Havanna', 'Grandwich', 'Axion', 'Pepsi']
 
+function havannaTypeOrder(name: string): number {
+  const n = name.toLowerCase()
+  if (/alfajor|havannet|coronita|medall[oó]n|miniaturas|barrita|waffle|mini mix/.test(n)) return 0
+  if (n.includes('galletita')) return 1
+  if (n.includes('tableta')) return 2
+  if (/bombon|bombón/.test(n)) return 3
+  if (n.includes('trufa')) return 4
+  if (n.includes('cuadradito')) return 5
+  if (n.includes('muffin')) return 6
+  if (n.includes('dulce de leche')) return 7
+  if (n.includes('syrup')) return 8
+  if (n.startsWith('té')) return 9
+  return 10
+}
+
+function sortProducts<T extends { supplier_name: string; product_name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const ai = SUPPLIERS.indexOf(a.supplier_name)
+    const bi = SUPPLIERS.indexOf(b.supplier_name)
+    const ao = ai === -1 ? SUPPLIERS.length : ai
+    const bo = bi === -1 ? SUPPLIERS.length : bi
+    if (ao !== bo) return ao - bo
+    if (a.supplier_name === 'Havanna') {
+      const ta = havannaTypeOrder(a.product_name)
+      const tb = havannaTypeOrder(b.product_name)
+      if (ta !== tb) return ta - tb
+    }
+    return a.product_name.localeCompare(b.product_name, 'es')
+  })
+}
+
 type Props = {
   rows: EnrichedCurrentRow[]
   comparisonRows: EnrichedComparisonRow[]
@@ -28,25 +59,20 @@ export default function StockTable({ rows, comparisonRows }: Props) {
 
   const showComparison = location === null
 
-  const filteredRows = rows.filter((r) => {
-    if (location && r.location_name !== location) return false
-    if (supplier && r.supplier_name !== supplier) return false
-    return true
-  })
-
-  const filteredComparison = comparisonRows
-    .filter((r) => {
+  const filteredRows = sortProducts(
+    rows.filter((r) => {
+      if (location && r.location_name !== location) return false
       if (supplier && r.supplier_name !== supplier) return false
       return true
-    })
-    .sort((a, b) => {
-      const ai = SUPPLIERS.indexOf(a.supplier_name)
-      const bi = SUPPLIERS.indexOf(b.supplier_name)
-      const ao = ai === -1 ? SUPPLIERS.length : ai
-      const bo = bi === -1 ? SUPPLIERS.length : bi
-      if (ao !== bo) return ao - bo
-      return a.product_name.localeCompare(b.product_name, 'es')
-    })
+    }),
+  )
+
+  const filteredComparison = sortProducts(
+    comparisonRows.filter((r) => {
+      if (supplier && r.supplier_name !== supplier) return false
+      return true
+    }),
+  )
 
   return (
     <div className="space-y-4">

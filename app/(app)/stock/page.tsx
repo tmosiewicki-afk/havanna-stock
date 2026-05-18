@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic'
 function resolveSupplier(categoryName: string, codigoHavanna: string | null): string {
   if (categoryName === 'havanna') return 'Havanna'
   if (codigoHavanna && /^(UN|HV)/i.test(codigoHavanna)) return 'Grandwich'
+  if (codigoHavanna && /^AFS/i.test(codigoHavanna)) return 'Axion'
   return 'Externo'
 }
 

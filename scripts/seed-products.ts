@@ -144,6 +144,98 @@ const GRANDWICH: { name: string; codigo: string }[] = [
   { name: 'Risotto de Calabaza',             codigo: 'HV612' },
 ]
 
+const AXION: { name: string; codigo: string; unit_label: string }[] = [
+  { name: 'Panceta Desayuno FC AFS x300f',         codigo: 'AFS-00027',      unit_label: 'unidad' },
+  { name: 'Cinnamon Roll',                          codigo: 'AFS-00064',      unit_label: 'unidad' },
+  { name: 'Pain au Chocolat',                       codigo: 'AFS-00065',      unit_label: 'unidad' },
+  { name: 'Hellmanns Mayonesa Sachet 196x7.6g',    codigo: 'AFS-00603',      unit_label: 'caja'   },
+  { name: 'Hellmanns Mayonesa Clásica DP 15x475g', codigo: 'AFS-00607',      unit_label: 'caja'   },
+  { name: 'Hellmanns Ketchup Sachet 196x8g',       codigo: 'AFS-00634',      unit_label: 'caja'   },
+  { name: 'Savora Mostaza Sachet 196x8g',          codigo: 'AFS-00650',      unit_label: 'caja'   },
+  { name: 'Queso Crema Doble Crema',               codigo: 'AFS003-00026',   unit_label: 'unidad' },
+  { name: 'Aceite Oliva 108un x10cc',              codigo: 'AFS010-70490',   unit_label: 'caja'   },
+  { name: 'Aceite Maíz 108un x10cc',               codigo: 'AFS010-70506',   unit_label: 'caja'   },
+  { name: 'Aceto 108un x10cc',                     codigo: 'AFS010-70513',   unit_label: 'caja'   },
+  { name: 'Jugo de Limón',                         codigo: 'AFS010-70575',   unit_label: 'unidad' },
+  { name: 'Leche Condensada 24x395gr',             codigo: 'AFS-12564623',   unit_label: 'caja'   },
+  { name: 'Leche de Almendras 12un x1L',           codigo: 'AFS-1688',       unit_label: 'caja'   },
+  { name: 'Leche Entera LS 12x1L',                 codigo: 'AFS-363008',     unit_label: 'caja'   },
+  { name: 'Leche Descremada LS UAT 12x1L',         codigo: 'AFS-363107',     unit_label: 'caja'   },
+  { name: 'Saborizante Syrup Vainilla 1L',         codigo: 'AFS-470032',     unit_label: 'unidad' },
+  { name: 'Saborizante Syrup Caramelo 1L',         codigo: 'AFS-470049',     unit_label: 'unidad' },
+  { name: 'Saborizante Syrup Avellanas 1L',        codigo: 'AFS-470056',     unit_label: 'unidad' },
+  { name: 'Concentrado Jengibre x1L',              codigo: 'AFS-470353',     unit_label: 'unidad' },
+  { name: 'Base Chocolatada x1L',                  codigo: 'AFS-472081',     unit_label: 'unidad' },
+  { name: 'Variegato de Maracuyá x400g',           codigo: 'AFS-473491',     unit_label: 'unidad' },
+  { name: 'Salsa Pera Man Limón Matcha 1L',        codigo: 'AFS-473507',     unit_label: 'unidad' },
+  { name: 'Puré Frutilla Banana Acaí 1L',          codigo: 'AFS-473514',     unit_label: 'unidad' },
+  { name: 'Salsa de Pistacho 1L',                  codigo: 'AFS-473590',     unit_label: 'unidad' },
+  { name: 'Concentrado Limonada x1kg',             codigo: 'AFS-473613',     unit_label: 'unidad' },
+  { name: 'Concentrado Pomelada 1L',               codigo: 'AFS-473743',     unit_label: 'unidad' },
+  { name: 'Puré Durazno-Mango-Jengibre 1L',        codigo: 'AFS-473750',     unit_label: 'unidad' },
+  { name: 'Puré Kiwi Melón Ananá 1L',              codigo: 'AFS-473767',     unit_label: 'unidad' },
+  { name: 'Salsa Banoffe 1L',                      codigo: 'AFS-473828',     unit_label: 'unidad' },
+  { name: 'Medialuna de Manteca',                  codigo: 'AFS-600841',     unit_label: 'unidad' },
+  { name: 'Medialuna de Grasa',                    codigo: 'AFS-600842',     unit_label: 'unidad' },
+  { name: 'Pan de Queso',                          codigo: 'AFS-601746',     unit_label: 'unidad' },
+  { name: 'Pan Caserito Blanco',                   codigo: 'AFS-601853',     unit_label: 'unidad' },
+  { name: 'Pan Caserito Multicereal',              codigo: 'AFS-601854',     unit_label: 'unidad' },
+  { name: 'Muffin Choc y Avellana',                codigo: 'AFS-601868',     unit_label: 'unidad' },
+  { name: 'Tarteleta Acelga Cebolla y Morrón',     codigo: 'AFS-601869',     unit_label: 'unidad' },
+  { name: 'Tarteleta Calabaza y Mozza',            codigo: 'AFS-601870',     unit_label: 'unidad' },
+  { name: 'Tarteleta de Pollo y Puerro',           codigo: 'AFS-601871',     unit_label: 'unidad' },
+  { name: 'Tarteleta Quiche Lorraine',             codigo: 'AFS-601891',     unit_label: 'unidad' },
+  { name: 'Muffin Vainilla c/DDL',                 codigo: 'AFS-601892',     unit_label: 'unidad' },
+  { name: 'Muffin Vegano c/Pasta Maní',            codigo: 'AFS-601893',     unit_label: 'unidad' },
+  { name: 'Marquise con DDL y Merengue',           codigo: 'AFS-601899',     unit_label: 'unidad' },
+  { name: 'Torta Red Velvet Petit x9',             codigo: 'AFS-601901',     unit_label: 'unidad' },
+  { name: 'Mini Torta de Manzana x9',              codigo: 'AFS-601904',     unit_label: 'unidad' },
+  { name: 'Cheese Cake',                           codigo: 'AFS-601914',     unit_label: 'unidad' },
+  { name: 'Lemon Pie',                             codigo: 'AFS-601915',     unit_label: 'unidad' },
+  { name: 'Cookie Coco Caramel x18',               codigo: 'AFS-601922',     unit_label: 'unidad' },
+  { name: 'Cookie Puro Chocolate x18',             codigo: 'AFS-601923',     unit_label: 'unidad' },
+  { name: 'Cookie Limón Pistacho Amapola',         codigo: 'AFS-601924',     unit_label: 'unidad' },
+  { name: 'Torta de Maní x9',                      codigo: 'AFS-601926',     unit_label: 'unidad' },
+  { name: 'Bowl Pollo x4',                         codigo: 'AFS-601927',     unit_label: 'unidad' },
+  { name: 'Cookie Red Velvet x9',                  codigo: 'AFS-601929',     unit_label: 'unidad' },
+  { name: 'Papas Crispers x bolsa',                codigo: 'AFS-605467',     unit_label: 'unidad' },
+  { name: 'Budín de Banana y Nuez',                codigo: 'AFS-606059',     unit_label: 'unidad' },
+  { name: 'Budín Limón y Arándanos x3',            codigo: 'AFS-606061',     unit_label: 'unidad' },
+  { name: 'Pan de Molde en Rodajas XL',            codigo: 'AFS-606062',     unit_label: 'unidad' },
+  { name: 'Guacamole Pickers 12un',                codigo: 'AFS-80748',      unit_label: 'unidad' },
+  { name: 'Sand Lomito y Queso 20u 190g',          codigo: 'AFS-839',        unit_label: 'unidad' },
+  { name: 'Salsa de DDL Libre de Gluten',          codigo: 'AFS-941322',     unit_label: 'unidad' },
+  { name: 'Sal Abedul x1000un',                    codigo: 'AFS-970384',     unit_label: 'unidad' },
+  { name: 'Almíbar 7 bolsas x1kg',                 codigo: 'AFS-C0130',      unit_label: 'unidad' },
+]
+
+async function seedAxion() {
+  const { data: cat } = await supabase.from('product_categories').select('id').eq('name', 'external_food').single()
+  if (!cat) throw new Error('Categoría external_food no encontrada')
+
+  const inserts = AXION.map(p => ({
+    name: p.name,
+    category_id: cat.id,
+    unit_label: p.unit_label,
+    min_stock_alert: 5,
+    codigo_havanna: p.codigo,
+  } as any))
+
+  const { data: newProducts, error } = await supabase.from('products').insert(inserts).select('id')
+  if (error) throw new Error(`Error insertando Axion: ${error.message}`)
+  console.log(`Productos Axion insertados: ${newProducts?.length}`)
+
+  const { data: locations } = await supabase.from('locations').select('id')
+  if (!locations) throw new Error('No se encontraron locales')
+
+  const stockRows = (newProducts ?? []).flatMap(p =>
+    locations.map(l => ({ product_id: p.id, location_id: l.id, quantity: 0 }))
+  )
+  const { error: stockErr } = await supabase.from('stock').insert(stockRows)
+  if (stockErr) throw new Error(`Error insertando stock: ${stockErr.message}`)
+  console.log(`Filas de stock creadas: ${stockRows.length}`)
+}
+
 async function seedGrandwich() {
   const { data: cat } = await supabase.from('product_categories').select('id').eq('name', 'external_food').single()
   if (!cat) throw new Error('Categoría external_food no encontrada')
@@ -236,4 +328,4 @@ async function main() {
   console.log('✓ Listo.')
 }
 
-main().catch(err => { console.error(err); process.exit(1) })
+seedAxion().catch(err => { console.error(err); process.exit(1) })

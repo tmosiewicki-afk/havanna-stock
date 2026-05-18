@@ -1,10 +1,29 @@
 import { createSupabaseClient } from '../../lib/supabase'
 import StockTable from '../components/StockTable'
 
+function resolveSupplier(categoryName: string, codigoHavanna: string | null): string {
+  if (categoryName === 'havanna') return 'Havanna'
+  if (codigoHavanna && /^(UN|HV)/i.test(codigoHavanna)) return 'Grandwich'
+  return 'Externo'
+}
+
 export default async function StockPage() {
   const db = createSupabaseClient()
-  const { data } = await db.from('stock_current').select('*')
-  const rows = data ?? []
+
+  const [{ data: stockData }, { data: productsData }] = await Promise.all([
+    db.from('stock_current').select('*'),
+    db.from('products').select('id, codigo_havanna' as any),
+  ])
+
+  const codeByProductId: Record<string, string | null> = {}
+  for (const p of (productsData ?? []) as any[]) {
+    codeByProductId[p.id] = p.codigo_havanna ?? null
+  }
+
+  const rows = (stockData ?? []).map((r) => ({
+    ...r,
+    supplier_name: resolveSupplier(r.category_name, codeByProductId[r.product_id] ?? null),
+  }))
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-5">

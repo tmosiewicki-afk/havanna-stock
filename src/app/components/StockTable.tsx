@@ -3,21 +3,23 @@
 import { useState } from 'react'
 import type { StockCurrentRow } from '../../lib/supabase'
 
+type EnrichedRow = StockCurrentRow & { supplier_name: string }
+
+const SUPPLIERS = ['Havanna', 'Grandwich', 'Axion', 'Pepsi']
+
 type Props = {
-  rows: StockCurrentRow[]
+  rows: EnrichedRow[]
 }
 
 export default function StockTable({ rows }: Props) {
   const [location, setLocation] = useState<string | null>(null)
-  const [category, setCategory] = useState<string | null>(null)
+  const [supplier, setSupplier] = useState<string | null>(null)
 
   const locations = [...new Set(rows.map((r) => r.location_name))].sort()
-  const categories = [...new Set(rows.map((r) => r.category_name))]
-  const categoryLabels = Object.fromEntries(rows.map((r) => [r.category_name, r.category_label]))
 
   const filtered = rows.filter((r) => {
     if (location && r.location_name !== location) return false
-    if (category && r.category_name !== category) return false
+    if (supplier && r.supplier_name !== supplier) return false
     return true
   })
 
@@ -42,18 +44,18 @@ export default function StockTable({ rows }: Props) {
           ))}
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-stone-500">Categoría:</span>
-          {['Todas', ...categories].map((c) => (
+          <span className="text-xs text-stone-500">Proveedor:</span>
+          {['Todos', ...SUPPLIERS].map((s) => (
             <button
-              key={c}
-              onClick={() => setCategory(c === 'Todas' ? null : c)}
+              key={s}
+              onClick={() => setSupplier(s === 'Todos' ? null : s)}
               className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                (c === 'Todas' ? category === null : category === c)
+                (s === 'Todos' ? supplier === null : supplier === s)
                   ? 'bg-stone-800 text-white'
                   : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'
               }`}
             >
-              {c === 'Todas' ? 'Todas' : categoryLabels[c]}
+              {s}
             </button>
           ))}
         </div>

@@ -69,15 +69,20 @@ const OK = (
 export default function StockTable({ rows, comparisonRows }: Props) {
   const [location, setLocation] = useState<string | null>(null)
   const [supplier, setSupplier] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const locations = [...new Set(rows.map((r) => r.location_name))].sort()
 
   const showComparison = location === null
 
+  const matchesSearch = (name: string) =>
+    !search || name.toLowerCase().includes(search.toLowerCase())
+
   const filteredRows = sortProducts(
     rows.filter((r) => {
       if (location && r.location_name !== location) return false
       if (supplier && r.supplier_name !== supplier) return false
+      if (!matchesSearch(r.product_name)) return false
       return true
     }),
   )
@@ -85,12 +90,22 @@ export default function StockTable({ rows, comparisonRows }: Props) {
   const filteredComparison = sortProducts(
     comparisonRows.filter((r) => {
       if (supplier && r.supplier_name !== supplier) return false
+      if (!matchesSearch(r.product_name)) return false
       return true
     }),
   )
 
   return (
     <div className="space-y-4">
+      {/* Search */}
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Buscar producto..."
+        className="w-full max-w-sm px-3 py-1.5 rounded border border-stone-200 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-300"
+      />
+
       {/* Filters */}
       <div className="flex flex-wrap gap-4">
         <div className="flex items-center gap-1.5">

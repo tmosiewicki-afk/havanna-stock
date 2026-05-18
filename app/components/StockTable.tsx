@@ -34,10 +34,19 @@ export default function StockTable({ rows, comparisonRows }: Props) {
     return true
   })
 
-  const filteredComparison = comparisonRows.filter((r) => {
-    if (supplier && r.supplier_name !== supplier) return false
-    return true
-  })
+  const filteredComparison = comparisonRows
+    .filter((r) => {
+      if (supplier && r.supplier_name !== supplier) return false
+      return true
+    })
+    .sort((a, b) => {
+      const ai = SUPPLIERS.indexOf(a.supplier_name)
+      const bi = SUPPLIERS.indexOf(b.supplier_name)
+      const ao = ai === -1 ? SUPPLIERS.length : ai
+      const bo = bi === -1 ? SUPPLIERS.length : bi
+      if (ao !== bo) return ao - bo
+      return a.product_name.localeCompare(b.product_name, 'es')
+    })
 
   return (
     <div className="space-y-4">

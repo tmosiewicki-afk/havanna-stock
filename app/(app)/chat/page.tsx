@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react'
+import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent, type ChangeEvent } from 'react'
 
 const STORAGE_KEY = 'havanna-chat'
 
@@ -18,6 +18,7 @@ type DisplayMessage = {
   role: 'user' | 'assistant'
   text: string
   toolCalls: ToolCall[]
+  imagePreview?: string
 }
 
 const TOOL_LABELS: Record<string, string> = {
@@ -61,8 +62,11 @@ export default function ChatPage() {
   const [apiMessages, setApiMessages] = useState<unknown[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     try {
@@ -89,6 +93,21 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  function handleImageSelect(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    if (!file) return
+    setImageFile(file)
+    const reader = new FileReader()
+    reader.onload = () => setImagePreview(reader.result as string)
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  function clearImage() {
+    setImageFile(null)
+    setImagePreview(null)
+  }
+
   function resizeTextarea() {
     const el = textareaRef.current
     if (!el) return
@@ -105,15 +124,34 @@ export default function ChatPage() {
     setTimeout(resizeTextarea, 0)
     setLoading(true)
 
+    const capturedImage = imageFile
+    const capturedPreview = imagePreview
+    clearImage()
+
     const userMsg: DisplayMessage = {
       id: crypto.randomUUID(),
       role: 'user',
       text,
       toolCalls: [],
+      imagePreview: capturedPreview ?? undefined,
     }
     setMessages((prev) => [...prev, userMsg])
 
-    const payload = [...apiMessages, { role: 'user', content: text }]
+    let userContent: unknown = text
+    if (capturedImage) {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve((reader.result as string).split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(capturedImage)
+      })
+      userContent = [
+        { type: 'image', source: { type: 'base64', media_type: capturedImage.type, data: base64 } },
+        { type: 'text', text },
+      ]
+    }
+
+    const payload = [...apiMessages, { role: 'user', content: userContent }]
 
     const assistantId = crypto.randomUUID()
     setMessages((prev) => [
@@ -310,8 +348,17 @@ export default function ChatPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="max-w-[80%] rounded-2xl rounded-tr-sm px-4 py-3 text-sm bg-red-800 text-white">
-                    {msg.text}
+                  <div className="max-w-[80%] space-y-1">
+                    {msg.imagePreview && (
+                      <img
+                        src={msg.imagePreview}
+                        alt="adjunto"
+                        className="rounded-xl max-h-48 object-cover"
+                      />
+                    )}
+                    <div className="rounded-2xl rounded-tr-sm px-4 py-3 text-sm bg-red-800 text-white">
+                      {msg.text}
+                    </div>
                   </div>
                 )}
               </div>
@@ -324,7 +371,36 @@ export default function ChatPage() {
       {/* Input */}
       <div className="sticky bottom-0 z-10 px-6 py-4 border-t border-stone-200 bg-white">
         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
+          {/* Image preview */}
+          {imagePreview && (
+            <div className="relative inline-block mb-2">
+              <img src={imagePreview} alt="preview" className="h-20 rounded-lg object-cover" />
+              <button
+                type="button"
+                onClick={clearImage}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-stone-700 text-white text-xs flex items-center justify-center hover:bg-stone-900"
+              >
+                ×
+              </button>
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageSelect}
+          />
           <div className="flex gap-3 items-end">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl border border-stone-200 text-stone-400 hover:text-stone-600 hover:border-stone-300 disabled:opacity-40 transition-colors"
+              title="Adjuntar imagen"
+            >
+              📎
+            </button>
             <textarea
               ref={textareaRef}
               value={input}

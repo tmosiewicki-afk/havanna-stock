@@ -23,6 +23,23 @@ function havannaTypeOrder(name: string): number {
   return 10
 }
 
+function axionTypeOrder(name: string): number {
+  const n = name.toLowerCase()
+  if (n.includes('leche') || n.includes('queso crema')) return 0
+  if (n.includes('medialuna') || n.startsWith('pan ') || n.includes('cinnamon') || n.includes('pain au')) return 1
+  if (/muffin|torta|cookie|bud[ií]n|cheese cake|lemon pie|marquise/.test(n)) return 2
+  if (n.includes('tarteleta') || n.includes('bowl')) return 3
+  if (/syrup|concentrado|pur[eé]|variegato|base |alm[ií]bar|salsa|jugo de/.test(n)) return 4
+  if (/hellmanns|mayonesa|ketchup|mostaza|guacamole|aceite|aceto|sal /.test(n)) return 5
+  return 6
+}
+
+function typeOrder(supplierName: string, productName: string): number {
+  if (supplierName === 'Havanna') return havannaTypeOrder(productName)
+  if (supplierName === 'Axion') return axionTypeOrder(productName)
+  return 0
+}
+
 function sortProducts<T extends { supplier_name: string; product_name: string }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
     const ai = SUPPLIERS.indexOf(a.supplier_name)
@@ -30,11 +47,9 @@ function sortProducts<T extends { supplier_name: string; product_name: string }>
     const ao = ai === -1 ? SUPPLIERS.length : ai
     const bo = bi === -1 ? SUPPLIERS.length : bi
     if (ao !== bo) return ao - bo
-    if (a.supplier_name === 'Havanna') {
-      const ta = havannaTypeOrder(a.product_name)
-      const tb = havannaTypeOrder(b.product_name)
-      if (ta !== tb) return ta - tb
-    }
+    const ta = typeOrder(a.supplier_name, a.product_name)
+    const tb = typeOrder(b.supplier_name, b.product_name)
+    if (ta !== tb) return ta - tb
     return a.product_name.localeCompare(b.product_name, 'es')
   })
 }

@@ -21,7 +21,8 @@ Reglas:
 - Siempre confirmá qué operación realizaste y el resultado.
 - Si el stock es insuficiente para una venta, informalo claramente.
 - Los nombres de productos y locales no son case-sensitive.
-- Para ajustes de inventario físico usá adjust_stock con la cantidad real contada.`
+- Para ajustes de inventario físico usá adjust_stock con la cantidad real contada.
+- Si el usuario menciona un producto sin especificar "caja", asumí que es por unidad. Solo preguntá si hay ambigüedad real (ej: el usuario dice explícitamente "una caja" pero no queda claro de qué tamaño).`
 
 const cachedTools: Tool[] = agentTools.map((tool: Tool, i: number) =>
   i === agentTools.length - 1

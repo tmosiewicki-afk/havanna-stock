@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react'
 
+const STORAGE_KEY = 'havanna-chat'
+
 type ToolCall = {
   id: string
   name: string
@@ -61,6 +63,27 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        setMessages(parsed.messages ?? [])
+        setApiMessages(parsed.apiMessages ?? [])
+      }
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      if (messages.length === 0) {
+        localStorage.removeItem(STORAGE_KEY)
+      } else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ messages, apiMessages }))
+      }
+    } catch {}
+  }, [messages, apiMessages])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -220,11 +243,21 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col min-h-full">
       {/* Header */}
-      <div className="sticky top-0 z-10 px-6 py-4 border-b border-stone-200 bg-white">
-        <h1 className="text-base font-semibold text-stone-900">Chat con el Agente</h1>
-        <p className="text-xs text-stone-400">
-          Registrá ventas, reposiciones y consultá el stock en lenguaje natural
-        </p>
+      <div className="sticky top-0 z-10 px-6 py-4 border-b border-stone-200 bg-white flex items-center justify-between">
+        <div>
+          <h1 className="text-base font-semibold text-stone-900">Chat con el Agente</h1>
+          <p className="text-xs text-stone-400">
+            Registrá ventas, reposiciones y consultá el stock en lenguaje natural
+          </p>
+        </div>
+        {messages.length > 0 && (
+          <button
+            onClick={() => { setMessages([]); setApiMessages([]) }}
+            className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+          >
+            Limpiar chat
+          </button>
+        )}
       </div>
 
       {/* Messages */}

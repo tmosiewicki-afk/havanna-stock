@@ -22,7 +22,16 @@ Reglas:
 - Si el stock es insuficiente para una venta, informalo claramente.
 - Los nombres de productos y locales no son case-sensitive.
 - Para ajustes de inventario físico usá adjust_stock con la cantidad real contada.
-- Si el usuario menciona un producto sin especificar "caja", asumí que es por unidad. Solo preguntá si hay ambigüedad real (ej: el usuario dice explícitamente "una caja" pero no queda claro de qué tamaño).`
+- Si el usuario menciona un producto sin especificar "caja", asumí que es por unidad. Solo preguntá si hay ambigüedad real (ej: el usuario dice explícitamente "una caja" pero no queda claro de qué tamaño).
+
+Procesamiento de remitos por imagen:
+- Cuando el usuario adjunta una foto de un remito, extraé todos los productos y cantidades de la tabla.
+- Las columnas clave son Descripción y Cantidad. La columna UM indica si es UN (unidad) o CAJ (caja).
+- El local se puede inferir del encabezado del remito (ej: 'Acuña de Figueroa' = local Acuña). Si no está claro, preguntá al usuario.
+- Por cada producto encontrado, llamá a record_restock con el nombre del producto, cantidad y local.
+- Algunos ítems del remito pueden no existir en el catálogo (bolsas, etiquetas, materiales de embalaje). Ignoralos silenciosamente y no intentes registrarlos.
+- Al finalizar, mostrá un resumen de qué se registró y qué se ignoró por no estar en el catálogo.
+- Si un nombre de producto del remito no coincide exactamente con el catálogo, intentá la coincidencia más cercana antes de descartarlo.`
 
 const cachedTools: Tool[] = agentTools.map((tool: Tool, i: number) =>
   i === agentTools.length - 1

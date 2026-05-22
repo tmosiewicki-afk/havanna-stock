@@ -18,7 +18,7 @@ type DisplayMessage = {
   role: 'user' | 'assistant'
   text: string
   toolCalls: ToolCall[]
-  imagePreview?: string
+  imagePreviews?: string[]
 }
 
 const TOOL_LABELS: Record<string, string> = {
@@ -62,8 +62,8 @@ export default function ChatPage() {
   const [apiMessages, setApiMessages] = useState<unknown[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -94,18 +94,26 @@ export default function ChatPage() {
   }, [messages])
 
   function handleImageSelect(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null
-    if (!file) return
-    setImageFile(file)
-    const reader = new FileReader()
-    reader.onload = () => setImagePreview(reader.result as string)
-    reader.readAsDataURL(file)
+    const files = Array.from(e.target.files ?? [])
+    if (files.length === 0) return
+    setImageFiles((prev) => [...prev, ...files])
+    files.forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = () =>
+        setImagePreviews((prev) => [...prev, reader.result as string])
+      reader.readAsDataURL(file)
+    })
     e.target.value = ''
   }
 
-  function clearImage() {
-    setImageFile(null)
-    setImagePreview(null)
+  function removeImage(index: number) {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index))
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function clearImages() {
+    setImageFiles([])
+    setImagePreviews([])
   }
 
   function resizeTextarea() {
@@ -124,31 +132,33 @@ export default function ChatPage() {
     setTimeout(resizeTextarea, 0)
     setLoading(true)
 
-    const capturedImage = imageFile
-    const capturedPreview = imagePreview
-    clearImage()
+    const capturedFiles = imageFiles
+    const capturedPreviews = imagePreviews
+    clearImages()
 
     const userMsg: DisplayMessage = {
       id: crypto.randomUUID(),
       role: 'user',
       text,
       toolCalls: [],
-      imagePreview: capturedPreview ?? undefined,
+      imagePreviews: capturedPreviews.length > 0 ? capturedPreviews : undefined,
     }
     setMessages((prev) => [...prev, userMsg])
 
     let userContent: unknown = text
-    if (capturedImage) {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve((reader.result as string).split(',')[1])
-        reader.onerror = reject
-        reader.readAsDataURL(capturedImage)
-      })
-      userContent = [
-        { type: 'image', source: { type: 'base64', media_type: capturedImage.type, data: base64 } },
-        { type: 'text', text },
-      ]
+    if (capturedFiles.length > 0) {
+      const imageBlocks = await Promise.all(
+        capturedFiles.map(async (file) => {
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve((reader.result as string).split(',')[1])
+            reader.onerror = reject
+            reader.readAsDataURL(file)
+          })
+          return { type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } }
+        }),
+      )
+      userContent = [...imageBlocks, { type: 'text', text }]
     }
 
     const payload = [...apiMessages, { role: 'user', content: userContent }]
@@ -349,12 +359,17 @@ export default function ChatPage() {
                   </div>
                 ) : (
                   <div className="max-w-[80%] space-y-1">
-                    {msg.imagePreview && (
-                      <img
-                        src={msg.imagePreview}
-                        alt="adjunto"
-                        className="rounded-xl max-h-48 object-cover"
-                      />
+                    {msg.imagePreviews && msg.imagePreviews.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {msg.imagePreviews.map((src, i) => (
+                          <img
+                            key={i}
+                            src={src}
+                            alt="adjunto"
+                            className="rounded-xl max-h-48 object-cover"
+                          />
+                        ))}
+                      </div>
                     )}
                     <div className="rounded-2xl rounded-tr-sm px-4 py-3 text-sm bg-red-800 text-white">
                       {msg.text}
@@ -371,23 +386,28 @@ export default function ChatPage() {
       {/* Input */}
       <div className="sticky bottom-0 z-10 px-6 py-4 border-t border-stone-200 bg-white">
         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
-          {/* Image preview */}
-          {imagePreview && (
-            <div className="relative inline-block mb-2">
-              <img src={imagePreview} alt="preview" className="h-20 rounded-lg object-cover" />
-              <button
-                type="button"
-                onClick={clearImage}
-                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-stone-700 text-white text-xs flex items-center justify-center hover:bg-stone-900"
-              >
-                ×
-              </button>
+          {/* Image previews */}
+          {imagePreviews.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {imagePreviews.map((src, i) => (
+                <div key={i} className="relative inline-block">
+                  <img src={src} alt="preview" className="h-20 rounded-lg object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(i)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-stone-700 text-white text-xs flex items-center justify-center hover:bg-stone-900"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
           )}
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            multiple
             className="hidden"
             onChange={handleImageSelect}
           />

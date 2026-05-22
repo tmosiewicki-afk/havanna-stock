@@ -29,7 +29,7 @@ Procesamiento de remitos por imagen:
 - Las columnas clave son Descripción y Cantidad. La columna UM indica si es UN (unidad) o CAJ (caja).
 - El local se puede inferir del encabezado del remito (ej: 'Acuña de Figueroa' = local Acuña). Si no está claro, preguntá al usuario.
 - Por cada producto encontrado, llamá a record_restock con el nombre del producto, cantidad y local.
-- Algunos ítems del remito pueden no existir en el catálogo (bolsas, etiquetas, materiales de embalaje). Ignoralos silenciosamente y no intentes registrarlos.
+- Si un ítem del remito no existe en el catálogo, no intentes registrarlo pero sí mencionalo explícitamente en el resumen final indicando el nombre exacto como aparece en el remito y por qué no se pudo registrar (no encontrado en catálogo).
 - Al finalizar, mostrá un resumen de qué se registró y qué se ignoró por no estar en el catálogo.
 - Si un nombre de producto del remito no coincide exactamente con el catálogo, intentá la coincidencia más cercana antes de descartarlo.`
 

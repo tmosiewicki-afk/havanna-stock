@@ -207,12 +207,52 @@ async function resolveProductId(name: string, db: DB): Promise<string> {
     .ilike('name', `%${name}%`)
     .eq('is_active', true)
   if (error) throw new Error(`Error buscando producto: ${error.message}`)
-  if (!data || data.length === 0) throw new Error(`Producto no encontrado: "${name}"`)
+
+  if (!data || data.length === 0) {
+    return resolveProductIdByWords(name, db)
+  }
   if (data.length > 1) {
     const names = (data as { id: string; name: string }[]).map((p) => p.name).join(', ')
     throw new Error(`Varios productos coinciden con "${name}": ${names}. Especificá el nombre completo.`)
   }
   return (data as { id: string; name: string }[])[0].id
+}
+
+async function resolveProductIdByWords(name: string, db: DB): Promise<string> {
+  const significantWords = name.split(/\s+/).filter((w) => w.length > 3)
+  if (significantWords.length === 0) throw new Error(`Producto no encontrado: "${name}"`)
+
+  const orFilter = significantWords.map((w) => `name.ilike.%${w}%`).join(',')
+  const { data, error } = await db
+    .from('products')
+    .select('id, name')
+    .or(orFilter)
+    .eq('is_active', true)
+
+  if (error) throw new Error(`Error buscando producto: ${error.message}`)
+  if (!data || data.length === 0) throw new Error(`Producto no encontrado: "${name}"`)
+
+  type ProductRow = { id: string; name: string }
+  const scored = (data as ProductRow[]).map((p) => {
+    const productWords = p.name.toLowerCase().split(/\s+/)
+    const matches = significantWords.filter((w) =>
+      productWords.some((pw) => pw.includes(w.toLowerCase()) || w.toLowerCase().includes(pw)),
+    )
+    return { ...p, score: matches.length }
+  })
+
+  scored.sort((a, b) => b.score - a.score)
+
+  if (scored[0].score === 0) throw new Error(`Producto no encontrado: "${name}"`)
+
+  if (scored.length === 1 || scored[0].score > scored[1].score) {
+    return scored[0].id
+  }
+
+  const topScore = scored[0].score
+  const tied = scored.filter((p) => p.score === topScore)
+  const names = tied.map((p) => p.name).join(', ')
+  throw new Error(`Varios productos coinciden con "${name}": ${names}. Especificá el nombre completo.`)
 }
 
 async function resolveSupplierIdOptional(

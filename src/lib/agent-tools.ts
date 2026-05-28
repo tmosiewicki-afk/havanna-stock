@@ -156,6 +156,43 @@ export const agentTools: Tool[] = [
       required: [],
     },
   },
+  {
+    name: 'bulk_restock',
+    description:
+      'Registra múltiples reposiciones de stock en un solo local en una única operación. Usar siempre al procesar remitos con varios productos.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        location_name: {
+          type: 'string',
+          description: 'Nombre del local: "Acuña" o "Triunvirato"',
+        },
+        items: {
+          type: 'array',
+          description: 'Lista de productos a reponer',
+          items: {
+            type: 'object',
+            properties: {
+              product_name: {
+                type: 'string',
+                description: 'Nombre del producto tal como figura en el catálogo',
+              },
+              quantity: {
+                type: 'number',
+                description: 'Cantidad repuesta (mayor a 0)',
+              },
+              unit: {
+                type: 'string',
+                description: 'Unidad de medida del remito: "UN" (unidad) o "CAJ" (caja)',
+              },
+            },
+            required: ['product_name', 'quantity'],
+          },
+        },
+      },
+      required: ['location_name', 'items'],
+    },
+  },
 ]
 
 // ===== Executor =====
@@ -179,6 +216,8 @@ export async function executeAgentTool(
         return await getLowStockAlerts(input, db)
       case 'get_movement_history':
         return await getMovementHistory(input, db)
+      case 'bulk_restock':
+        return await bulkRestock(input, db)
       default:
         throw new Error(`Tool desconocida: ${toolName}`)
     }
@@ -363,4 +402,91 @@ async function getMovementHistory(input: ToolInput, db: DB) {
   const { data, error } = await query
   if (error) throw new Error(error.message)
   return data
+}
+
+type BulkItem = { product_name: string; quantity: number; unit?: string }
+
+async function bulkRestock(input: ToolInput, db: DB) {
+  const locationId = await resolveLocationId(input.location_name as string, db)
+  const items = input.items as BulkItem[]
+
+  // Resolve all product IDs in parallel, capturing per-item failures
+  const resolved = await Promise.all(
+    items.map(async (item) => {
+      try {
+        const productId = await resolveProductId(item.product_name, db)
+        return { ok: true as const, productId, item }
+      } catch (err) {
+        return {
+          ok: false as const,
+          item,
+          reason: err instanceof Error ? err.message : String(err),
+        }
+      }
+    }),
+  )
+
+  const successes = resolved.filter((r) => r.ok === true) as Array<{
+    ok: true
+    productId: string
+    item: BulkItem
+  }>
+  const failures = resolved.filter((r) => r.ok === false) as Array<{
+    ok: false
+    item: BulkItem
+    reason: string
+  }>
+
+  if (successes.length === 0) {
+    return {
+      registered: 0,
+      failed: failures.map((f) => ({ product_name: f.item.product_name, reason: f.reason })),
+    }
+  }
+
+  // Bulk insert all movements in a single query
+  const { error: movError } = await db.from('movements').insert(
+    successes.map((r) => ({
+      location_id: locationId,
+      product_id: r.productId,
+      movement_type: 'restock' as const,
+      quantity: r.item.quantity,
+      notes: r.item.unit ? `UM: ${r.item.unit}` : null,
+    })),
+  )
+
+  if (movError) throw new Error(`Error insertando movimientos: ${movError.message}`)
+
+  // Fetch current stock for all resolved products in one query
+  const productIds = successes.map((r) => r.productId)
+  const { data: currentStock, error: stockFetchError } = await db
+    .from('stock')
+    .select('product_id, quantity')
+    .eq('location_id', locationId)
+    .in('product_id', productIds)
+
+  if (stockFetchError) throw new Error(`Error leyendo stock actual: ${stockFetchError.message}`)
+
+  const stockMap = Object.fromEntries(
+    (currentStock ?? []).map((s) => [s.product_id, s.quantity]),
+  )
+
+  // Bulk upsert updated stock quantities in a single query
+  const now = new Date().toISOString()
+  const { error: stockError } = await db.from('stock').upsert(
+    successes.map((r) => ({
+      location_id: locationId,
+      product_id: r.productId,
+      quantity: (stockMap[r.productId] ?? 0) + r.item.quantity,
+      last_updated: now,
+    })),
+    { onConflict: 'location_id,product_id' },
+  )
+
+  if (stockError) throw new Error(`Error actualizando stock: ${stockError.message}`)
+
+  return {
+    registered: successes.length,
+    failed: failures.map((f) => ({ product_name: f.item.product_name, reason: f.reason })),
+  }
 }

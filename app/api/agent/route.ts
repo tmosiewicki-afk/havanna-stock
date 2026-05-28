@@ -28,10 +28,10 @@ Procesamiento de remitos por imagen:
 - Cuando el usuario adjunta una foto de un remito, extraé todos los productos y cantidades de la tabla.
 - Las columnas clave son Descripción y Cantidad. La columna UM indica si es UN (unidad) o CAJ (caja).
 - El local se puede inferir del encabezado del remito (ej: 'Acuña de Figueroa' = local Acuña). Si no está claro, preguntá al usuario.
-- Por cada producto encontrado, llamá a record_restock con el nombre del producto, cantidad y local.
-- Si un ítem del remito no existe en el catálogo, no intentes registrarlo pero sí mencionalo explícitamente en el resumen final indicando el nombre exacto como aparece en el remito y por qué no se pudo registrar (no encontrado en catálogo).
-- Al finalizar, mostrá un resumen de qué se registró y qué se ignoró por no estar en el catálogo.
-- Si un nombre de producto del remito no coincide exactamente con el catálogo, intentá la coincidencia más cercana antes de descartarlo.`
+- Usá bulk_restock con TODOS los productos del remito en una sola llamada, pasando el array completo de items. Nunca uses múltiples llamadas a record_restock para procesar un remito.
+- La respuesta de bulk_restock ya indica cuáles se registraron y cuáles fallaron con el motivo.
+- Al finalizar, mostrá un resumen de qué se registró y qué no pudo registrarse (con el motivo exacto devuelto por la tool).
+- Si un nombre de producto del remito no coincide exactamente con el catálogo, la tool intentará la coincidencia más cercana antes de descartarlo.`
 
 const cachedTools: Tool[] = agentTools.map((tool: Tool, i: number) =>
   i === agentTools.length - 1

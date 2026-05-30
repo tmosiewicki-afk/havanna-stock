@@ -1,7 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import type { StockCurrentRow } from '../../lib/supabase'
+import { useState, useRef } from 'react'
+import { createClient } from '@supabase/supabase-js'
+import type { StockCurrentRow, Database } from '../../lib/supabase'
+
+const supabase = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+)
 
 type EnrichedRow = StockCurrentRow & { supplier_name: string }
 
@@ -11,9 +17,29 @@ type Props = {
   rows: EnrichedRow[]
 }
 
+type EditingState = {
+  key: string
+  productId: string
+  locationId: string
+  originalValue: number
+}
+
+const LOW = (
+  <span className="px-2 py-0.5 rounded text-xs font-medium text-red-700 bg-red-100">Bajo</span>
+)
+const OK = (
+  <span className="px-2 py-0.5 rounded text-xs font-medium text-green-700 bg-green-50">OK</span>
+)
+
 export default function StockTable({ rows }: Props) {
   const [location, setLocation] = useState<string | null>(null)
   const [supplier, setSupplier] = useState<string | null>(null)
+
+  const [localValues, setLocalValues] = useState<Record<string, number>>({})
+  const [editing, setEditing] = useState<EditingState | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [errorKey, setErrorKey] = useState<string | null>(null)
+  const editValueRef = useRef('')
 
   const locations = [...new Set(rows.map((r) => r.location_name))].sort()
 
@@ -22,6 +48,56 @@ export default function StockTable({ rows }: Props) {
     if (supplier && r.supplier_name !== supplier) return false
     return true
   })
+
+  function cellKey(productId: string, locationId: string) {
+    return `${productId}:${locationId}`
+  }
+
+  function setEditValueSafe(v: string) {
+    setEditValue(v)
+    editValueRef.current = v
+  }
+
+  function startEdit(row: EnrichedRow, currentValue: number) {
+    const key = cellKey(row.product_id, row.location_id)
+    setEditing({ key, productId: row.product_id, locationId: row.location_id, originalValue: currentValue })
+    setEditValueSafe(String(currentValue))
+    setErrorKey(null)
+  }
+
+  async function saveEdit() {
+    if (!editing) return
+    const { productId, locationId, originalValue } = editing
+    const key = editing.key
+    const newQty = Math.round(Number(editValueRef.current))
+
+    setEditing(null)
+
+    if (!editValueRef.current || isNaN(newQty) || newQty < 0 || newQty === originalValue) return
+
+    setLocalValues((prev) => ({ ...prev, [key]: newQty }))
+
+    const { error } = await supabase
+      .from('stock')
+      .upsert(
+        { location_id: locationId, product_id: productId, quantity: newQty },
+        { onConflict: 'location_id,product_id' },
+      )
+
+    if (error) {
+      setLocalValues((prev) => {
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+      setErrorKey(key)
+      setTimeout(() => setErrorKey((prev) => (prev === key ? null : prev)), 3000)
+    }
+  }
+
+  function cancelEdit() {
+    setEditing(null)
+  }
 
   return (
     <div className="space-y-4">
@@ -97,40 +173,57 @@ export default function StockTable({ rows }: Props) {
                 </td>
               </tr>
             ) : (
-              filtered.map((row) => (
-                <tr
-                  key={row.id}
-                  className={`border-b border-stone-50 last:border-0 ${
-                    row.is_low_stock ? 'bg-red-50/40' : ''
-                  }`}
-                >
-                  <td className="px-4 py-2.5 font-medium text-stone-900">{row.product_name}</td>
-                  <td className="px-4 py-2.5 text-stone-400 text-xs">{row.category_label}</td>
-                  <td className="px-4 py-2.5 text-stone-600">{row.location_name}</td>
-                  <td
-                    className={`px-4 py-2.5 text-right font-bold ${
-                      row.is_low_stock ? 'text-red-600' : 'text-stone-800'
-                    }`}
+              filtered.map((row) => {
+                const key = cellKey(row.product_id, row.location_id)
+                const qty = localValues[key] ?? row.quantity
+                const isLow = localValues[key] !== undefined ? false : row.is_low_stock
+                const isEditing = editing?.key === key
+                const hasError = errorKey === key
+
+                return (
+                  <tr
+                    key={row.id}
+                    className={`border-b border-stone-50 last:border-0 ${isLow ? 'bg-red-50/40' : ''}`}
                   >
-                    {row.quantity}
-                  </td>
-                  <td className="px-4 py-2.5 text-stone-400 text-xs">{row.unit_label}</td>
-                  <td className="px-4 py-2.5 text-right text-stone-400 text-xs">
-                    {row.min_stock_alert}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {row.is_low_stock ? (
-                      <span className="px-2 py-0.5 rounded text-xs font-medium text-red-700 bg-red-100">
-                        Bajo
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded text-xs font-medium text-green-700 bg-green-50">
-                        OK
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))
+                    <td className="px-4 py-2.5 font-medium text-stone-900">{row.product_name}</td>
+                    <td className="px-4 py-2.5 text-stone-400 text-xs">{row.category_label}</td>
+                    <td className="px-4 py-2.5 text-stone-600">{row.location_name}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          min="0"
+                          value={editValue}
+                          autoFocus
+                          className="w-16 text-right text-sm font-bold border border-stone-400 rounded px-1 py-0 focus:outline-none focus:ring-1 focus:ring-stone-500"
+                          onChange={(e) => setEditValueSafe(e.target.value)}
+                          onBlur={saveEdit}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') e.currentTarget.blur()
+                            if (e.key === 'Escape') cancelEdit()
+                          }}
+                        />
+                      ) : (
+                        <button
+                          onClick={() => startEdit(row, qty)}
+                          title={hasError ? 'Error al guardar — valor sin cambios' : 'Clic para editar'}
+                          className={`font-bold rounded px-1 -mx-1 hover:bg-stone-100 transition-colors cursor-pointer ${
+                            hasError ? 'text-red-400' : isLow ? 'text-red-600' : 'text-stone-800'
+                          }`}
+                        >
+                          {qty}
+                          {hasError && <span className="ml-1 text-xs font-normal text-red-400">!</span>}
+                        </button>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-stone-400 text-xs">{row.unit_label}</td>
+                    <td className="px-4 py-2.5 text-right text-stone-400 text-xs">
+                      {row.min_stock_alert}
+                    </td>
+                    <td className="px-4 py-2.5">{isLow ? LOW : OK}</td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>

@@ -1,7 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import type { StockCurrentRow, StockComparisonRow } from '@/src/lib/supabase'
+import { useState, useMemo, useRef } from 'react'
+import { createClient } from '@supabase/supabase-js'
+import type { StockCurrentRow, StockComparisonRow, Database } from '@/src/lib/supabase'
+
+const supabase = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+)
 
 type EnrichedCurrentRow = StockCurrentRow & { supplier_name: string }
 type EnrichedComparisonRow = StockComparisonRow & { supplier_name: string }
@@ -59,6 +65,13 @@ type Props = {
   comparisonRows: EnrichedComparisonRow[]
 }
 
+type EditingState = {
+  key: string
+  productId: string
+  locationName: string
+  originalValue: number
+}
+
 const LOW = (
   <span className="px-2 py-0.5 rounded text-xs font-medium text-red-700 bg-red-100">Bajo</span>
 )
@@ -71,7 +84,29 @@ export default function StockTable({ rows, comparisonRows }: Props) {
   const [supplier, setSupplier] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
+  const [localValues, setLocalValues] = useState<Record<string, number>>({})
+  const [editing, setEditing] = useState<EditingState | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [errorKey, setErrorKey] = useState<string | null>(null)
+  const editValueRef = useRef('')
+
   const locations = [...new Set(rows.map((r) => r.location_name))].sort()
+
+  const locationIdByName = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const r of rows) map[r.location_name] = r.location_id
+    return map
+  }, [rows])
+
+  // Map comparison view column slugs to actual DB location names
+  const acunaName = useMemo(
+    () => locations.find((l) => /a[cç]u[nñ]a/i.test(l)) ?? 'Acuña',
+    [locations],
+  )
+  const triunviratoName = useMemo(
+    () => locations.find((l) => /triunvirato/i.test(l)) ?? 'Triunvirato',
+    [locations],
+  )
 
   const showComparison = location === null
 
@@ -94,6 +129,111 @@ export default function StockTable({ rows, comparisonRows }: Props) {
       return true
     }),
   )
+
+  function cellKey(productId: string, locationName: string) {
+    return `${productId}:${locationName}`
+  }
+
+  function displayValue(productId: string, locationName: string, fallback: number) {
+    return localValues[cellKey(productId, locationName)] ?? fallback
+  }
+
+  function setEditValueSafe(v: string) {
+    setEditValue(v)
+    editValueRef.current = v
+  }
+
+  function startEdit(productId: string, locationName: string, currentValue: number) {
+    setEditing({
+      key: cellKey(productId, locationName),
+      productId,
+      locationName,
+      originalValue: currentValue,
+    })
+    setEditValueSafe(String(currentValue))
+    setErrorKey(null)
+  }
+
+  async function saveEdit() {
+    if (!editing) return
+    const { productId, locationName, originalValue } = editing
+    const key = editing.key
+    const raw = editValueRef.current
+    const newQty = Math.round(Number(raw))
+
+    setEditing(null)
+
+    if (!raw || isNaN(newQty) || newQty < 0 || newQty === originalValue) return
+
+    const locationId = locationIdByName[locationName]
+    if (!locationId) return
+
+    setLocalValues((prev) => ({ ...prev, [key]: newQty }))
+
+    const { error } = await supabase
+      .from('stock')
+      .upsert(
+        { location_id: locationId, product_id: productId, quantity: newQty },
+        { onConflict: 'location_id,product_id' },
+      )
+
+    if (error) {
+      setLocalValues((prev) => {
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+      setErrorKey(key)
+      setTimeout(() => setErrorKey((prev) => (prev === key ? null : prev)), 3000)
+    }
+  }
+
+  function cancelEdit() {
+    setEditing(null)
+  }
+
+  function renderStockCell(
+    productId: string,
+    locationName: string,
+    fallback: number,
+    isLow: boolean,
+  ) {
+    const key = cellKey(productId, locationName)
+    const value = displayValue(productId, locationName, fallback)
+    const isEditing = editing?.key === key
+    const hasError = errorKey === key
+
+    if (isEditing) {
+      return (
+        <input
+          type="number"
+          min="0"
+          value={editValue}
+          autoFocus
+          className="w-16 text-right text-sm font-bold border border-stone-400 rounded px-1 py-0 focus:outline-none focus:ring-1 focus:ring-stone-500"
+          onChange={(e) => setEditValueSafe(e.target.value)}
+          onBlur={saveEdit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+            if (e.key === 'Escape') cancelEdit()
+          }}
+        />
+      )
+    }
+
+    return (
+      <button
+        onClick={() => startEdit(productId, locationName, value)}
+        title={hasError ? 'Error al guardar — valor sin cambios' : 'Clic para editar'}
+        className={`font-bold rounded px-1 -mx-1 hover:bg-stone-100 transition-colors cursor-pointer ${
+          hasError ? 'text-red-400' : isLow ? 'text-red-600' : 'text-stone-800'
+        }`}
+      >
+        {value}
+        {hasError && <span className="ml-1 text-xs font-normal text-red-400">!</span>}
+      </button>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -180,7 +320,21 @@ export default function StockTable({ rows, comparisonRows }: Props) {
                 </tr>
               ) : (
                 filteredComparison.map((row) => {
-                  const isLow = row.acuna_low || row.triunvirato_low
+                  const acunaVal = displayValue(row.product_id, acunaName, row.acuna_qty)
+                  const triunviratoVal = displayValue(
+                    row.product_id,
+                    triunviratoName,
+                    row.triunvirato_qty,
+                  )
+                  const acunaLow =
+                    localValues[cellKey(row.product_id, acunaName)] !== undefined
+                      ? false
+                      : row.acuna_low
+                  const triunviratoLow =
+                    localValues[cellKey(row.product_id, triunviratoName)] !== undefined
+                      ? false
+                      : row.triunvirato_low
+                  const isLow = acunaLow || triunviratoLow
                   return (
                     <tr
                       key={row.product_id}
@@ -188,17 +342,20 @@ export default function StockTable({ rows, comparisonRows }: Props) {
                     >
                       <td className="px-4 py-2.5 font-medium text-stone-900">{row.product_name}</td>
                       <td className="px-4 py-2.5 text-stone-400 text-xs">{row.category_label}</td>
-                      <td
-                        className={`px-4 py-2.5 text-right font-bold ${row.acuna_low ? 'text-red-600' : 'text-stone-800'}`}
-                      >
-                        {row.acuna_qty}
+                      <td className="px-4 py-2.5 text-right">
+                        {renderStockCell(row.product_id, acunaName, row.acuna_qty, acunaLow)}
                       </td>
-                      <td
-                        className={`px-4 py-2.5 text-right font-bold ${row.triunvirato_low ? 'text-red-600' : 'text-stone-800'}`}
-                      >
-                        {row.triunvirato_qty}
+                      <td className="px-4 py-2.5 text-right">
+                        {renderStockCell(
+                          row.product_id,
+                          triunviratoName,
+                          row.triunvirato_qty,
+                          triunviratoLow,
+                        )}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-stone-600">{row.total_qty}</td>
+                      <td className="px-4 py-2.5 text-right text-stone-600">
+                        {acunaVal + triunviratoVal}
+                      </td>
                       <td className="px-4 py-2.5 text-stone-400 text-xs">{row.unit_label}</td>
                       <td className="px-4 py-2.5">{isLow ? LOW : OK}</td>
                     </tr>
@@ -245,26 +402,30 @@ export default function StockTable({ rows, comparisonRows }: Props) {
                   </td>
                 </tr>
               ) : (
-                filteredRows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className={`border-b border-stone-50 last:border-0 ${row.is_low_stock ? 'bg-red-50/40' : ''}`}
-                  >
-                    <td className="px-4 py-2.5 font-medium text-stone-900">{row.product_name}</td>
-                    <td className="px-4 py-2.5 text-stone-400 text-xs">{row.category_label}</td>
-                    <td className="px-4 py-2.5 text-stone-600">{row.location_name}</td>
-                    <td
-                      className={`px-4 py-2.5 text-right font-bold ${row.is_low_stock ? 'text-red-600' : 'text-stone-800'}`}
+                filteredRows.map((row) => {
+                  const isLow =
+                    localValues[cellKey(row.product_id, row.location_name)] !== undefined
+                      ? false
+                      : row.is_low_stock
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`border-b border-stone-50 last:border-0 ${isLow ? 'bg-red-50/40' : ''}`}
                     >
-                      {row.quantity}
-                    </td>
-                    <td className="px-4 py-2.5 text-stone-400 text-xs">{row.unit_label}</td>
-                    <td className="px-4 py-2.5 text-right text-stone-400 text-xs">
-                      {row.min_stock_alert}
-                    </td>
-                    <td className="px-4 py-2.5">{row.is_low_stock ? LOW : OK}</td>
-                  </tr>
-                ))
+                      <td className="px-4 py-2.5 font-medium text-stone-900">{row.product_name}</td>
+                      <td className="px-4 py-2.5 text-stone-400 text-xs">{row.category_label}</td>
+                      <td className="px-4 py-2.5 text-stone-600">{row.location_name}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        {renderStockCell(row.product_id, row.location_name, row.quantity, isLow)}
+                      </td>
+                      <td className="px-4 py-2.5 text-stone-400 text-xs">{row.unit_label}</td>
+                      <td className="px-4 py-2.5 text-right text-stone-400 text-xs">
+                        {row.min_stock_alert}
+                      </td>
+                      <td className="px-4 py-2.5">{isLow ? LOW : OK}</td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>

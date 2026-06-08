@@ -4,6 +4,7 @@ import { createSupabaseClient } from '../../lib/supabase'
 import StockTable from '../components/StockTable'
 
 function resolveSupplier(categoryName: string, codigoHavanna: string | null): string {
+  console.log('resolveSupplier:', categoryName, codigoHavanna)
   if (categoryName === 'havanna') return 'Havanna'
   if (categoryName === 'bebidas') return 'Pepsi'
   if (codigoHavanna && /^(UN|HV)/i.test(codigoHavanna)) return 'Grandwich'
@@ -27,6 +28,8 @@ export default async function StockPage() {
     ...r,
     supplier_name: resolveSupplier(r.category_name, codeByProductId[r.product_id] ?? null),
   }))
+
+  console.log('rows con Pepsi:', rows.filter((r) => r.supplier_name === 'Pepsi').length, 'de', rows.length)
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-5">

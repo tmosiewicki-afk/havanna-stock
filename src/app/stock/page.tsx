@@ -5,6 +5,7 @@ import StockTable from '../components/StockTable'
 
 function resolveSupplier(categoryName: string, codigoHavanna: string | null): string {
   if (categoryName === 'havanna') return 'Havanna'
+  if (categoryName === 'bebidas') return 'Pepsi'
   if (codigoHavanna && /^(UN|HV)/i.test(codigoHavanna)) return 'Grandwich'
   return 'Externo'
 }
